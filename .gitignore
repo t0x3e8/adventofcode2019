@@ -2,3 +2,5 @@ Debug/
 bin/
 .vscode/
 obj/
+app/
+dashboard/
