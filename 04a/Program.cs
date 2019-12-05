@@ -41,7 +41,7 @@ namespace _04a
         {
             bool result = false;
             var numberText = number.ToString();
-            for (int i = 0; i < 9; i++)
+            for (int i = 0; i <= 9; i++)
             {
                 result = numberText.Contains(string.Concat(i.ToString(), i.ToString()));
                 if (result)
