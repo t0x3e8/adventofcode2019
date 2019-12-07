@@ -11,18 +11,15 @@ namespace _07b
         {
             HashSet<int> results = new HashSet<int>();
             var inputParameters = GetPermutations(new int[] { 5, 6, 7, 8, 9 }, 5).ToArray();
-            Tuple<int, int> programOutput;
-            var inputParameter = new int[] { 1, 0, 4, 3, 2 };
 
-            // foreach (var inputParameter in inputParameters)
+            foreach (var inputParameter in inputParameters)
             {
-                programOutput = RunProgram(ReadFile("input.txt"), inputParameter);
-                // results.Add(programOutput);
+                var programOutput = RunProgram(ReadFile("input.txt"), inputParameter);
+                results.Add(programOutput.Item1);
             }
 
 
-            // Console.WriteLine("highest is: " + results.Max());
-            Console.WriteLine("The last is: " + programOutput.Item2);
+            Console.WriteLine($"The total MAX is: {results.Max()}");
         }
 
         static IEnumerable<IEnumerable<T>> GetPermutations<T>(IEnumerable<T> list, int length)
@@ -38,30 +35,28 @@ namespace _07b
             int totalOutput = 0;
             int lastOutput = 0;
             var parameters = inputParameters.ToArray();
-            Queue<AmplifierVM> amplifiers = new Queue<AmplifierVM>();
-            amplifiers.Enqueue(new AmplifierVM(0, parameters[0], 0));
-            amplifiers.Enqueue(new AmplifierVM(0, parameters[1], 1));
-            amplifiers.Enqueue(new AmplifierVM(0, parameters[2], 2));
-            amplifiers.Enqueue(new AmplifierVM(0, parameters[3], 3));
-            amplifiers.Enqueue(new AmplifierVM(0, parameters[4], 4));
-            Queue<int> outputs = new Queue<int>();
+            Dictionary<string, AmplifierVM> amps = new Dictionary<string, AmplifierVM>();
+            amps.Add("A", new AmplifierVM(0, parameters[0], "A", "E"));
+            amps.Add("B", new AmplifierVM(null, parameters[1], "B", "A"));
+            amps.Add("C", new AmplifierVM(null, parameters[2], "C", "B"));
+            amps.Add("D", new AmplifierVM(null, parameters[3], "D", "C"));
+            amps.Add("E", new AmplifierVM(null, parameters[4], "E", "D"));
+            IEnumerator<KeyValuePair<string, AmplifierVM>> ampsEnumerator = amps.GetEnumerator();
 
-            while (amplifiers.Count() > 0)
+            while (true)
             {
-                var vm = amplifiers.Dequeue();
-                int? tempInput = (outputs.Count() > 0) ? outputs.Dequeue() as int? : 0;
-                var amplifierOutput = vm.RunCode(inputData, tempInput, (output) =>
-                {
-                    outputs.Enqueue(output);
-                });
-                if (amplifierOutput.IsHalted)
-                {
-                    amplifiers.Enqueue(vm);
+                bool okNext = ampsEnumerator.MoveNext();
+                if (!okNext) {
+                    ampsEnumerator.Reset();
+                    ampsEnumerator.MoveNext();
                 }
-                else if (amplifierOutput.IsFinished)
+                var ampVM = ampsEnumerator.Current.Value;
+                var amplifierOutput = ampVM.RunCode(new List<int>(inputData), amps[ampVM.InputAmplifierID].Outputs);
+                if (ampVM.ID == "E" && amplifierOutput.IsFinished)
                 {
                     totalOutput += amplifierOutput.Output.Value;
                     lastOutput = amplifierOutput.Output.Value;
+                    break;
                 }
             }
 
@@ -94,6 +89,8 @@ namespace _07b
 
     public class AmplifierVM
     {
+        public List<int> Outputs = new List<int>();
+        public string InputAmplifierID { get; set; }
         const int OP_ADD = 1;
         const int OP_MUL = 2;
         const int OP_IN = 3;
@@ -105,22 +102,29 @@ namespace _07b
         private int? initialSignal;
         private int defaultSetting;
         private bool isSettingReadFlag = false;
-        private int ID;
+        public string ID {get;set;}
         private int preservedPositionOfExecution = 0;
         private bool preservedCompletnessOfExecution = false;
         private int preservedResultOfExecution = 0;
-        public AmplifierVM(int? initialSignal, int defaultSetting, int ID)
+        private int preservedSingalsCounterOfExecution = 0;
+        private List<int> preservedInputData;
+        public AmplifierVM(int? initialSignal, int defaultSetting, string ID, string inputAmplifierID)
         {
             this.initialSignal = initialSignal;
             this.defaultSetting = defaultSetting;
             this.ID = ID;
+            this.InputAmplifierID = inputAmplifierID;
         }
 
-        public VMOutput RunCode(List<int> inputData, int? ioSignal, Action<int> outputCallback)
+        public VMOutput RunCode(List<int> inputData, List<int> ioSignals)
         {
             int curPos = this.preservedPositionOfExecution;
+            int signalsCounter = this.preservedSingalsCounterOfExecution;
             bool done = this.preservedCompletnessOfExecution;
             int result = this.preservedResultOfExecution;
+            if (this.preservedInputData != null) {
+                inputData = this.preservedInputData;
+            }
 
             Console.WriteLine($"{this.ID} START, curPost: {curPos}");
 
@@ -166,23 +170,23 @@ namespace _07b
                     case OP_IN:
                         int parameter = 0;
 
-                        if (this.initialSignal.HasValue)
-                        {
-                            Console.WriteLine($"{this.ID} using initial signal: {this.initialSignal.Value}");
-                            parameter = this.initialSignal.Value;
-                            this.initialSignal = null;
-                        }
-                        else if (!this.isSettingReadFlag)
+                        if (!this.isSettingReadFlag)
                         {
                             Console.WriteLine($"{this.ID} using settings: {this.defaultSetting}");
                             parameter = this.defaultSetting;
                             this.isSettingReadFlag = true;
                         }
-                        else if (ioSignal.HasValue)
+                        else if (this.initialSignal.HasValue)
                         {
-                            Console.WriteLine($"{this.ID} previous amplifier signal: {ioSignal}");
-                            parameter = ioSignal.Value;
-                            ioSignal = null;
+                            Console.WriteLine($"{this.ID} using initial signal: {this.initialSignal.Value}");
+                            parameter = this.initialSignal.Value;
+                            this.initialSignal = null;
+                        }
+                        else if (signalsCounter < ioSignals.Count)
+                        {
+                            parameter = ioSignals[signalsCounter];
+                            Console.WriteLine($"{this.ID} using previous amplifier signal: {parameter}");
+                            signalsCounter++;
                         }
                         else
                         {
@@ -190,9 +194,10 @@ namespace _07b
                             this.preservedCompletnessOfExecution = done;
                             this.preservedPositionOfExecution = curPos;
                             this.preservedResultOfExecution = result;
+                            this.preservedSingalsCounterOfExecution = signalsCounter;
+                            this.preservedInputData = new List<int>(inputData);
 
                             return new VMOutput(null, 3);
-
                         }
 
                         inputData[inputData[curPos + 1]] = parameter;
@@ -200,7 +205,7 @@ namespace _07b
                         break;
                     case OP_OUT:
                         result = inputData[inputData[curPos + 1]];
-                        outputCallback.Invoke(result);
+                        this.Outputs.Add(result);
                         Console.WriteLine($"{this.ID} OUTPUT {result}");
                         curPos += 2;
                         break;
@@ -275,7 +280,7 @@ namespace _07b
 
         public override string ToString()
         {
-            return this.ID.ToString();
+            return this.ID;
         }
     }
 }
