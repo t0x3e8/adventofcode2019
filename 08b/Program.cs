@@ -26,7 +26,7 @@ namespace _08b
             {
                 for (int x = 0; x < w; x++)
                 {
-                    int loc = x + (y * h);
+                    int loc = x + (y * w);
                     var allPixels = images.Select(img => img[loc]).ToArray();
                     image[loc] = DeterminePixelColor(allPixels);
                 }
@@ -40,7 +40,7 @@ namespace _08b
             for (int y = 0; y < h; y++)
             {
                 for (int x = 0; x < w; x++)
-                    Console.Write(image[x + (y * h)]);
+                    Console.Write(image[x + (y * w)]);
 
                 Console.WriteLine();
             }
