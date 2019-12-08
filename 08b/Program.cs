@@ -47,12 +47,9 @@ namespace _08b
         }
         private static char DeterminePixelColor(char[] pixels)
         {
-            while (true)
-            {
-                for (int i = 0; i < pixels.Length; i++)
-                    if (pixels[i] != '2')
-                        return pixels[i] == '0' ? '\u2617' : '\u2616';
-            }
+            for (int i = 0; i < pixels.Length; i++)
+                if (pixels[i] != '2')
+                    return pixels[i] == '0' ? '\u2617' : '\u2616';
 
             return 'E';
         }
