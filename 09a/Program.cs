@@ -9,7 +9,7 @@ namespace _09a
     {
         static void Main(string[] args)
         {
-            VM optComputer = new VM(0, 0, "A", null);
+            VM optComputer = new VM(1, 0, "A", null);
             var output = optComputer.RunCode(ReadFile("input.txt"), null);
 
             Console.WriteLine(output.Output);
@@ -32,7 +32,7 @@ namespace _09a
         public int Status { get; set; }
         public bool IsFinished { get { return this.Status == 1; } }
         public bool IsHalted { get { return this.Status == 3; } }
-        public VMOutput(int? output, int status)
+        public VMOutput(long? output, int status)
         {
             this.Output = output;
             this.Status = status;
@@ -61,7 +61,7 @@ namespace _09a
         private long preservedResultOfExecution = 0;
         private int preservedSingalsCounterOfExecution = 0;
         private List<long> preservedInputData;
-        private static int referenceBase = 0;
+        private static long referenceBase = 0;
 
         public VM(int? initialSignal, int defaultSetting, string ID, string inputAmplifierID)
         {
@@ -108,13 +108,13 @@ namespace _09a
                         curPos += 4;
                         break;
                     case OP_JIT:
-                        curPos = OperateCurrentPosition(inputData, curPos, (inVal, outVal) =>
+                        curPos = (int)OperateCurrentPosition(inputData, curPos, (inVal, outVal) =>
                         {
                             return (inVal != 0) ? outVal : curPos += 3;
                         });
                         break;
                     case OP_JIF:
-                        curPos = OperateCurrentPosition(inputData, curPos, (inVal, outVal) =>
+                        curPos = (int)OperateCurrentPosition(inputData, curPos, (inVal, outVal) =>
                         {
                             return (inVal == 0) ? outVal : curPos += 3;
                         });
@@ -181,7 +181,7 @@ namespace _09a
             return new VMOutput(result, 1);
         }
 
-        static int OperateCurrentPosition(List<long> inputData, int curPos, Func<long, long, long> test)
+        static long OperateCurrentPosition(List<long> inputData, int curPos, Func<long, long, long> test)
         {
             var opCode = ToArray(inputData[curPos]);
 
@@ -201,7 +201,7 @@ namespace _09a
                 for (int i = inputData.Count; i <= outputAddress; i++)
                     inputData.Add(0);
 
-            inputData[outputAddress] = test(val1, val2);
+            inputData[(int)outputAddress] = test(val1, val2);
 
             return inputData;
         }
@@ -209,20 +209,20 @@ namespace _09a
         static long ReadValue(List<long> inputData, int curPos, int paramPosition)
         {
             var opCode = ToArray(inputData[curPos]);
-            var val = 0;
+            long val = 0;
             var address = inputData[curPos + paramPosition];
             int shifted = paramPosition + 1;
 
             if (opCode.Length >= shifted && opCode[shifted] == 1)
                 val = inputData[curPos + paramPosition];
             else if (opCode.Length >= shifted && opCode[shifted] == 2)
-                val = inputData[referenceBase];
+                val = inputData[(int)referenceBase];
             else
             {
                 if (inputData.Count < address)
                     val = 0;
                 else
-                    val = inputData[address];
+                    val = inputData[(int)address];
             }
 
             return val;
