@@ -44,31 +44,48 @@ namespace _09c
     {
       var val1 = this.ReadValue(inputData, curPos, 1);
       var val2 = this.ReadValue(inputData, curPos, 2);
-      var outputAddress = inputData[curPos + 3];
+      var outputAddress = ReadAddress(inputData, curPos, 3);
 
       if (inputData.Count <= outputAddress)
         inputData.AddRange(new long[outputAddress - inputData.Count + 1]);
 
+      outputAddress = (outputAddress<0)? 0: outputAddress;
       inputData[(int)outputAddress] = mathOperation(val1, val2);
 
       return inputData;
     }
 
-    private long ReadValue(List<long> inputData, int curPos, int opArgumentPosition)
+    private List<long> Operate(List<long> inputData, int curPos, Func<long> mathOperation)
     {
       var opCode = ToArray((int)inputData[curPos]);
-      long val = 0;
-      var address = inputData[curPos + opArgumentPosition];
+      var outputAddress = this.ReadAddress(inputData, curPos, 1);
+
+      if (inputData.Count <= outputAddress)
+        inputData.AddRange(new long[outputAddress - inputData.Count + 1]);
+
+      inputData[(int)outputAddress] = mathOperation();
+
+      return inputData;
+    }
+
+    private int ReadAddress(List<long> inputData, int curPos, int opArgumentPosition)
+    {
+      var opCode = ToArray((int)inputData[curPos]);
       int shifted = opArgumentPosition + 1;
+      var address = curPos + opArgumentPosition;
 
       if (opCode.Length > shifted && opCode[shifted] == 1)
-        val = inputData[curPos + opArgumentPosition];
+        return address;
       else if (opCode.Length > shifted && opCode[shifted] == 2)
-        val = inputData[(int)(referenceBase + inputData[curPos + opArgumentPosition])];
+        return (int)(referenceBase + inputData[address]);
       else
-        val = (inputData.Count < address || address < 0) ? 0 : inputData[(int)address];
+        return (inputData.Count <= address) ? 0 : (int)inputData[address];
+    }
 
-      return val;
+    private long ReadValue(List<long> inputData, int curPos, int opArgumentPosition)
+    {
+      int address = this.ReadAddress(inputData, curPos, opArgumentPosition);
+      return inputData[address];
     }
 
     private static int[] ToArray(int number)
@@ -150,7 +167,7 @@ namespace _09c
             {
               int lthResult = (v1 < v2) ? 1 : 0;
 
-              Console.WriteLine($"{this.ID} LTH {lthResult}");
+              Console.WriteLine($"{this.ID} LTH {v1}<{v2}= {lthResult}");
               return lthResult;
             });
             curPos += 4;
@@ -176,7 +193,11 @@ namespace _09c
               parameter = 0;
             }
 
-            inputData[(int)inputData[curPos + 1]] = parameter;
+            inputData = Operate(inputData, curPos, () =>
+            {
+              Console.WriteLine($"{this.ID} INput {parameter} ");
+              return parameter;
+            });
             curPos += 2;
             break;
           case (int)OpCodes.OP_OUT:
@@ -204,7 +225,7 @@ namespace _09c
     static void Main(string[] args)
     {
       var inputData = ReadFile("input.txt");
-      VM vm = new VM(null, 1, "VM");
+      VM vm = new VM(null, 2, "VM");
 
       long result = vm.RunCode(inputData);
       Console.WriteLine(result);
